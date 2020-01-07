@@ -144,6 +144,15 @@ let config_file verify_cert extended_diagnosis host port legacy =
       bool_of_string (Inventory.lookup ~default:"false" "CC_PREPARATIONS")
     with _ -> false
   in
+  let is_valid_crl_path crl_path =
+    try match Sys.is_directory crl_path with
+      | true ->
+        (match Sys.readdir crl_path with
+         | [| |] -> false
+         | _ -> true)
+      | false -> false
+    with _ -> false
+  in
   String.concat "\n" @@ List.concat
   [ [ "client=yes"
     ; "foreground=yes"
@@ -161,9 +170,9 @@ let config_file verify_cert extended_diagnosis host port legacy =
       ["verify=2"
       ; sprintf "checkHost=%s" host
       ; sprintf "CAfile=%s" certificates_bundle_path
-      ; (match Sys.readdir crl_path with
-         | [| |] -> ""
-         | _ -> sprintf "CRLpath=%s" crl_path)
+      ; (match is_valid_crl_path crl_path with
+         | true -> sprintf "CRLpath=%s" crl_path
+         | false -> "")
       ]
     else []
   ; if legacy then
